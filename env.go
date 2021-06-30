@@ -20,10 +20,10 @@ type Setter interface {
 	Set(string) error
 }
 
-// Set sets the fields of a struct from environment config.
+// SetWithEnvPrefix sets the fields of a struct from environment config.
 // If a field is unexported or required configuration is not
 // found, an error will be returned.
-func Set(i interface{}) (err error) {
+func SetWithEnvPrefix(i interface{}, envPrefix string) (err error) {
 	v := reflect.ValueOf(i)
 
 	// Don't try to process a non-pointer value.
@@ -35,7 +35,7 @@ func Set(i interface{}) (err error) {
 	t := reflect.TypeOf(i).Elem()
 
 	for i := 0; i < t.NumField(); i++ {
-		if err = processField(t.Field(i), v.Field(i)); err != nil {
+		if err = processField(t.Field(i), v.Field(i), envPrefix); err != nil {
 			return
 		}
 	}
@@ -43,11 +43,15 @@ func Set(i interface{}) (err error) {
 	return
 }
 
+func Set(i interface{}) (err error) {
+	return SetWithEnvPrefix(i, "")
+}
+
 // processField will lookup the "env" tag for the property
 // and attempt to set it.  If not found, another check for the
 // "required" tag will be performed to decided whether an error
 // needs to be returned.
-func processField(t reflect.StructField, v reflect.Value) (err error) {
+func processField(t reflect.StructField, v reflect.Value, envPrefix string) (err error) {
 	envTag, ok := t.Tag.Lookup("env")
 	if !ok {
 		return
@@ -61,7 +65,7 @@ func processField(t reflect.StructField, v reflect.Value) (err error) {
 
 	// Lookup the environment variable and if found, set and
 	// return
-	env, ok := os.LookupEnv(envTag)
+	env, ok := os.LookupEnv(envPrefix + envTag)
 	if ok {
 		return setField(t, v, env)
 	}

@@ -614,7 +614,7 @@ func TestInvalidConfigurationForDuration(t *testing.T) {
 
 	err := Set(&config)
 	ErrorNotNil(t, err)
-	Equals(t, `error setting "Prop": time: unknown unit hh in duration 1hh`, err.Error())
+	Equals(t, `error setting "Prop": time: unknown unit "hh" in duration "1hh"`, err.Error())
 }
 
 func TestEnvNonPointer(t *testing.T) {
