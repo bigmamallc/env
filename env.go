@@ -24,6 +24,14 @@ type Setter interface {
 // If a field is unexported or required configuration is not
 // found, an error will be returned.
 func SetWithEnvPrefix(i interface{}, envPrefix string) (err error) {
+	return setWithEnvPrefix(i, envPrefix, false)
+}
+
+func SetDefaultOnly(i interface{}, envPrefix string) (err error) {
+	return setWithEnvPrefix(i, envPrefix, true)
+}
+
+func setWithEnvPrefix(i interface{}, envPrefix string, ignoreMissing bool) (err error) {
 	v := reflect.ValueOf(i)
 
 	// Don't try to process a non-pointer value.
@@ -35,7 +43,7 @@ func SetWithEnvPrefix(i interface{}, envPrefix string) (err error) {
 	t := reflect.TypeOf(i).Elem()
 
 	for i := 0; i < t.NumField(); i++ {
-		if err = processField(t.Field(i), v.Field(i), envPrefix); err != nil {
+		if err = processFieldIgnoreMissing(t.Field(i), v.Field(i), envPrefix, ignoreMissing); err != nil {
 			return
 		}
 	}
@@ -52,6 +60,10 @@ func Set(i interface{}) (err error) {
 // "required" tag will be performed to decided whether an error
 // needs to be returned.
 func processField(t reflect.StructField, v reflect.Value, envPrefix string) (err error) {
+	return processFieldIgnoreMissing(t, v, envPrefix, false)
+}
+
+func processFieldIgnoreMissing(t reflect.StructField, v reflect.Value, envPrefix string, ignoreMissing bool) (err error) {
 	envTag, ok := t.Tag.Lookup("env")
 	if !ok {
 		return
@@ -77,10 +89,14 @@ func processField(t reflect.StructField, v reflect.Value, envPrefix string) (err
 		return setField(t, v, d)
 	}
 
-	// An env tag has been provided but a matching environment
-	// variable cannot be found, determine if we should return
-	// an error or if a missing variable is ok/expected.
-	return processMissing(t, envTag, configTypeEnvironment)
+	if !ignoreMissing {
+		// An env tag has been provided but a matching environment
+		// variable cannot be found, determine if we should return
+		// an error or if a missing variable is ok/expected.
+		return processMissing(t, envTag, configTypeEnvironment)
+	} else {
+		return nil
+	}
 }
 
 func setField(t reflect.StructField, v reflect.Value, value string) (err error) {
