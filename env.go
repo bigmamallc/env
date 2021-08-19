@@ -70,7 +70,7 @@ func processFieldIgnoreMissing(t reflect.StructField, v reflect.Value, envPrefix
 	}
 
 	if v.Kind() == reflect.Struct {
-		if err = setWithEnvPrefix(v.Addr().Interface(), envPrefix, ignoreMissing); err != nil {
+		if err = setWithEnvPrefix(v.Addr().Interface(), envPrefix + envTag, ignoreMissing); err != nil {
 			return fmt.Errorf("failed to set nested struct: %w", err)
 		}
 		return nil
