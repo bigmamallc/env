@@ -69,6 +69,13 @@ func processFieldIgnoreMissing(t reflect.StructField, v reflect.Value, envPrefix
 		return
 	}
 
+	if v.Kind() == reflect.Struct {
+		if err = setWithEnvPrefix(v.Addr().Interface(), envPrefix, ignoreMissing); err != nil {
+			return fmt.Errorf("failed to set nested struct: %w", err)
+		}
+		return nil
+	}
+
 	// If the field is unexported or just not settable, bail at
 	// this point because subsequent operations will fail.
 	if !v.CanSet() {
@@ -79,14 +86,14 @@ func processFieldIgnoreMissing(t reflect.StructField, v reflect.Value, envPrefix
 	// return
 	env, ok := os.LookupEnv(envPrefix + envTag)
 	if ok {
-		return setField(t, v, env)
+		return setField(t, v, env, envPrefix, ignoreMissing)
 	}
 
 	// If the value isn't found in the environment, look for a
 	// user-defined default value
 	d, ok := t.Tag.Lookup("default")
 	if ok {
-		return setField(t, v, d)
+		return setField(t, v, d, envPrefix, ignoreMissing)
 	}
 
 	if !ignoreMissing {
@@ -99,7 +106,7 @@ func processFieldIgnoreMissing(t reflect.StructField, v reflect.Value, envPrefix
 	}
 }
 
-func setField(t reflect.StructField, v reflect.Value, value string) (err error) {
+func setField(t reflect.StructField, v reflect.Value, value string, envPrefix string, ignoreMissing bool) (err error) {
 	// If field implements the Setter interface, invoke it now and
 	// don't continue attempting to set the primitive values.
 	if _, ok := v.Interface().(Setter); ok {
